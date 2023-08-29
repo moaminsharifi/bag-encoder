@@ -130,6 +130,8 @@ venv.bak/
 *.zip
 *.txt
 .idea
+*.json
+*.me
 # Spyder project settings
 .spyderproject
 .spyproject
