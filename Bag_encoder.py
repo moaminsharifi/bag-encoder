@@ -18,7 +18,7 @@ class BagEncoder:
     def __init__(self, pretrained_model_name, batch_size):
         self.tokenizer = BertTokenizer.from_pretrained(pretrained_model_name)
         self.batch_size = batch_size
-        self.bert_model = BertModel.from_pretrained(pretrained_model_name)
+        self.bert_model = BertModel.from_pretrained(pretrained_model_name).to(device)
         self.input_dim = self.bert_model.config.hidden_size
         self.attention = nn.Sequential(
             nn.Linear(self.bert_model.config.hidden_size, 1),
@@ -27,9 +27,10 @@ class BagEncoder:
         ).to(device)
 
     def encode_sentences(self, sentences, labels, entity_pairs):
-        inputs = self.tokenizer(sentences, return_tensors="pt", padding=True, truncation=True, max_length=128)
+        inputs = self.tokenizer(sentences, return_tensors="pt", padding=True, truncation=True, max_length=32).to(
+            device)
         outputs = self.bert_model(**inputs)
-        sentence_embedding = torch.mean(outputs.last_hidden_state, dim=1)
+        sentence_embedding = torch.mean(outputs.last_hidden_state, dim=1).to(device)
         data = self.create_bags(sentence_embedding, labels, entity_pairs)
         return data
 

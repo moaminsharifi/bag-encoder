@@ -33,6 +33,7 @@ val_losses = []
 
 LABELS = np.array([0, 1]).astype(int)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 training_date = datetime.datetime.now().strftime("%Y-%m-%d")
 t_dt = datetime.datetime.now().strftime("%Y%m%d-%H%M")
 log_dir = f"tensorboard/e-{epochs}-b-{batch_size}-{t_dt}"
@@ -70,11 +71,15 @@ for epoch in range(epochs):
         batch_loss = 0
         for pair_key in bag_embeddings:
             sentence_embeddings = bag_embeddings[pair_key]['relation representation'].to(device)
-            bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
+            # bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
             label = torch.tensor(bag_embeddings[pair_key]['labels'], dtype=torch.float).to(device)
+
+            # print(f" sentence_embeddings: {sentence_embeddings.size()}")
+            # print(f" bag_embedding: {bag_embedding.size()}")
+            # print(f" label: {label.size()}")
             optimizer.zero_grad()
-            outputs = mlp_classifier(bag_embedding).squeeze(0).to(device)
-            loss = criterion(outputs, label)
+            outputs = mlp_classifier(sentence_embeddings).squeeze(0).to(device)
+            loss = criterion(outputs.view(-1), label)
             loss.backward(retain_graph=True)
             optimizer.step()
             train_losses.append(loss.item())
