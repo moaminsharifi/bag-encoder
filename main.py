@@ -15,9 +15,9 @@ from Bag_encoder import BagEncoder
 from Bin_classfier import MLPClassifier
 
 # Define hyperparameters
-epochs = 6
-learning_rate = 0.0001
-batch_size = 32
+epochs = 4
+learning_rate = 0.001
+batch_size = 128
 input_size = 768
 hidden_size1 = 200
 hidden_size2 = 100
@@ -54,6 +54,7 @@ total_params = sum(p.numel() for p in mlp_classifier.parameters())
 print(total_params)
 # optimizer = torch.optim.Adam(mlp_classifier.parameters(), lr=learning_rate)
 optimizer = torch.optim.Adadelta(mlp_classifier.parameters())
+# criterion = nn.BCEWithLogitsLoss()
 criterion = nn.BCELoss()
 best_val_loss = float('inf')
 data_set_size = (len(train_dataset) // batch_size) + 1
