@@ -15,13 +15,13 @@ from Bag_encoder import BagEncoder
 from Bin_classfier import MLPClassifier
 
 # Define hyperparameters
-epochs = 4
-learning_rate = 0.001
-batch_size = 128
+epochs = 2
+learning_rate = 0.00001
+batch_size = 320
 input_size = 768
-hidden_size1 = 200
-hidden_size2 = 100
-hidden_size3 = 100
+hidden_size1 = 50
+hidden_size2 = 50
+hidden_size3 = 50
 max_length = 500
 num_labels = 2
 
@@ -45,7 +45,7 @@ writer = SummaryWriter(log_dir)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-weights = torch.tensor([0.25]).to(device)  # Set weight of class 0 to 1, weight of class 1 to 4
+#weights = torch.tensor([0.25]).to(device)  # Set weight of class 0 to 1, weight of class 1 to 4
 
 bag_encoder = BagEncoder(pretrained_model_name="bert-base-uncased", batch_size=batch_size)
 mlp_classifier = MLPClassifier(input_size, hidden_size1, hidden_size2, hidden_size3).to(device)
@@ -53,7 +53,7 @@ mlp_classifier = MLPClassifier(input_size, hidden_size1, hidden_size2, hidden_si
 total_params = sum(p.numel() for p in mlp_classifier.parameters())
 print(total_params)
 optimizer = torch.optim.Adam(mlp_classifier.parameters(), lr=learning_rate)
-criterion = nn.BCEWithLogitsLoss(pos_weight=weights)
+criterion = nn.BCEWithLogitsLoss()
 best_val_loss = float('inf')
 data_set_size = (len(train_dataset) // batch_size) + 1
 mlp_classifier.train()
