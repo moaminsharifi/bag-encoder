@@ -90,6 +90,7 @@ for epoch in range(epochs):
         df_data_loss['loss'].append(avg_train_loss)
         df_data_loss['epoch'].append(epoch + 1)
         df_data_loss["step"].append(ep_step_count)
+
     print(f'Epoch: {epoch}, Training Loss: {avg_train_loss}')
 
     # Validation phase
@@ -118,7 +119,7 @@ for epoch in range(epochs):
                 predicted = (outputs > 0.5).float()
                 # print (f"label:{predicted}")
                 all_labels.extend(label.cpu().numpy().tolist())
-                all_predictions.extend(predicted.cpu().numpy().tolist())
+                all_predictions.extend(predicted.view(-1).cpu().numpy().tolist())
 
             val_loss += losses[-1]
             val_steps += 1
