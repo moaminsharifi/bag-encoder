@@ -15,9 +15,9 @@ from Bag_encoder import BagEncoder
 from Bin_classfier import MLPClassifier
 
 # Define hyperparameters
-epochs = 2
-learning_rate = 0.00001
-batch_size = 240
+epochs = 4
+learning_rate = 0.001
+batch_size = 128
 input_size = 768
 hidden_size1 = 200
 hidden_size2 = 100
