@@ -54,7 +54,7 @@ class BagEncoder:
             batch_entity_pairs = group_entity_pairs[i:i + self.batch_size]
 
             inputs = self.tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True,
-                                    max_length=64).to(device)
+                                    max_length=500).to(device)
             outputs = self.bert_model(**inputs)
             sentence_embeddings = torch.mean(outputs.last_hidden_state, dim=1).to(device)
             self.create_bags(data, sentence_embeddings, batch_labels, batch_entity_pairs)
