@@ -1,3 +1,22 @@
+import torch
+
+# Create a DataLoader
+# train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+# test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+# print(train_dataset[0])
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# batch_size = 32
+
+
+from collections import defaultdict
+from transformers import BertTokenizer, BertModel
+import torch.nn as nn
+import torch
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 class BagEncoder:
     def __init__(self, pretrained_model_name, batch_size):
         self.tokenizer = BertTokenizer.from_pretrained(pretrained_model_name)
@@ -22,7 +41,7 @@ class BagEncoder:
         data = {}
         for key, group in grouped_data.items():
             data[key] = self.process_group(group['sentences'], group['labels'], group['entity_pairs'])
-        
+
         return data
 
     def process_group(self, group_sentences, group_labels, group_entity_pairs):
@@ -30,15 +49,16 @@ class BagEncoder:
         data = defaultdict(lambda: defaultdict(list))
 
         for i in range(0, num_samples, self.batch_size):
-            batch_sentences = group_sentences[i:i+self.batch_size]
-            batch_labels = group_labels[i:i+self.batch_size]
-            batch_entity_pairs = group_entity_pairs[i:i+self.batch_size]
+            batch_sentences = group_sentences[i:i + self.batch_size]
+            batch_labels = group_labels[i:i + self.batch_size]
+            batch_entity_pairs = group_entity_pairs[i:i + self.batch_size]
 
-            inputs = self.tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True, max_length=32).to(device)
+            inputs = self.tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True,
+                                    max_length=32).to(device)
             outputs = self.bert_model(**inputs)
             sentence_embeddings = torch.mean(outputs.last_hidden_state, dim=1).to(device)
             self.create_bags(data, sentence_embeddings, batch_labels, batch_entity_pairs)
-            
+
         return data
 
     def create_bags(self, data, sentence_embeddings, labels, entity_pairs):
@@ -52,8 +72,8 @@ class BagEncoder:
                 continue
             bag = torch.stack(data[pair_key]['embeddings']).to(device)
             attention_weights = self.attention(bag)
-            attention_applied = (bag * attention_weights).sum(dim=0)
-            
+            attention_applied = (bag * attention_weights)
+
             data[pair_key]['bag'] = bag
             data[pair_key]['relation representation'] = attention_applied
 

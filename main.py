@@ -15,7 +15,7 @@ from Bag_encoder import BagEncoder
 from Bin_classfier import MLPClassifier
 
 # Define hyperparameters
-epochs = 5
+epochs = 2
 learning_rate = 0.00001
 batch_size = 240
 input_size = 768
@@ -69,10 +69,10 @@ for epoch in range(epochs):
         bag_embeddings = bag_encoder.encode_sentences(sentences, labels, entity_pairs)
 
         batch_loss = 0
-        for pair_key in bag_embeddings:
-            sentence_embeddings = bag_embeddings[pair_key]['relation representation'].to(device)
+        for pair_key, pair_value in bag_embeddings.items():
+            sentence_embeddings = torch.tensor(pair_value[pair_key]['relation representation']).to(device)
             # bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
-            label = torch.tensor(bag_embeddings[pair_key]['labels'], dtype=torch.float).to(device)
+            label = torch.tensor(pair_value[pair_key]['labels'], dtype=torch.float).to(device)
 
             # print(f" sentence_embeddings: {sentence_embeddings.size()}")
             # print(f" bag_embedding: {bag_embedding.size()}")
@@ -106,10 +106,10 @@ for epoch in range(epochs):
             sentences, labels, entity_pairs = batch
             bag_embeddings = bag_encoder.encode_sentences(sentences, labels, entity_pairs)
 
-            for pair_key in bag_embeddings:
-                sentence_embeddings = bag_embeddings[pair_key]['relation representation'].to(device)
+            for pair_key, pair_value in bag_embeddings.items():
+                sentence_embeddings = pair_value[pair_key]['relation representation'].to(device)
                 bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
-                label = torch.tensor(bag_embeddings[pair_key]['labels'], dtype=torch.float).to(device)
+                label = torch.tensor(pair_value[pair_key]['labels'], dtype=torch.float).to(device)
                 # print (f"label:{label}")
                 outputs = mlp_classifier(sentence_embeddings).squeeze(0).to(device)
                 # print (f"label:{outputs}")
