@@ -9,19 +9,19 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-# from Bag_Encoder_Dataloader_NYT10 import train_dataset, test_dataset
-from Bag_Encoder_Dataloader_GIDS import train_dataset, test_dataset
+from Bag_Encoder_Dataloader_NYT10 import train_dataset, test_dataset
+#from Bag_Encoder_Dataloader_GIDS import train_dataset, test_dataset
 from Bag_encoder import BagEncoder
 from Bin_classfier import MLPClassifier
 
 # Define hyperparameters
-epochs = 4
-learning_rate = 0.001
-batch_size = 128
+epochs = 2
+learning_rate = 0.00001
+batch_size = 160
 input_size = 768
-hidden_size1 = 200
-hidden_size2 = 100
-hidden_size3 = 100
+hidden_size1 = 500
+hidden_size2 = 400
+hidden_size3 = 500
 max_length = 500
 num_labels = 2
 
@@ -45,24 +45,23 @@ writer = SummaryWriter(log_dir)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-weights = torch.tensor([0.25]).to(device)  # Set weight of class 0 to 1, weight of class 1 to 4
+weights = torch.tensor([0.75, 0.25]).to(device)
 
 bag_encoder = BagEncoder(pretrained_model_name="bert-base-uncased", batch_size=batch_size)
 mlp_classifier = MLPClassifier(input_size, hidden_size1, hidden_size2, hidden_size3).to(device)
 
 total_params = sum(p.numel() for p in mlp_classifier.parameters())
 print(total_params)
-# optimizer = torch.optim.Adam(mlp_classifier.parameters(), lr=learning_rate)
-optimizer = torch.optim.Adadelta(mlp_classifier.parameters())
-# criterion = nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam(mlp_classifier.parameters(), lr=learning_rate)
 criterion = nn.BCELoss()
+#criterion = nn.CrossEntropyLoss(weight=weights)
 best_val_loss = float('inf')
 data_set_size = (len(train_dataset) // batch_size) + 1
 mlp_classifier.train()
 train_losses = []
 for epoch in range(epochs):
     mlp_classifier.train()  # Set the model to training mode
-    train_loss = 0
+    train_loss = 0.0
     step_count = 0
     for batch in tqdm.tqdm(train_dataloader):
         step_count += 1
@@ -84,12 +83,11 @@ for epoch in range(epochs):
             loss = criterion(outputs.view(-1), label)
             loss.backward(retain_graph=True)
             optimizer.step()
-            train_losses.append(loss.item())
-            train_loss += loss.item()
+            train_loss += loss.item()         
 
         ep_step_count = (data_set_size * epoch) + step_count - 1
         avg_train_loss = train_loss / step_count
-        df_data_loss['loss'].append(avg_train_loss)
+        df_data_loss["loss"].append(loss.item())
         df_data_loss['epoch'].append(epoch + 1)
         df_data_loss["step"].append(ep_step_count)
 
@@ -110,7 +108,7 @@ for epoch in range(epochs):
 
             for pair_key, pair_value in bag_embeddings.items():
                 sentence_embeddings = pair_value[pair_key]['relation representation'].to(device)
-                bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
+                #bag_embedding = torch.mean(sentence_embeddings, dim=0, keepdim=True)
                 label = torch.tensor(pair_value[pair_key]['labels'], dtype=torch.float).to(device)
                 # print (f"label:{label}")
                 outputs = mlp_classifier(sentence_embeddings).squeeze(0).to(device)
@@ -118,7 +116,7 @@ for epoch in range(epochs):
                 loss = criterion(outputs.view(-1), label)
                 # print (f"label:{loss}")
                 losses.append(loss.item())
-                predicted = (outputs > 0.5).float()
+                predicted = (outputs > 0.6).float()
                 # print (f"label:{predicted}")
                 all_labels.extend(label.cpu().numpy().tolist())
                 all_predictions.extend(predicted.view(-1).cpu().numpy().tolist())
@@ -129,6 +127,7 @@ for epoch in range(epochs):
         recall = recall_score(all_labels, all_predictions)
         f1 = f1_score(all_labels, all_predictions)
         auc = roc_auc_score(all_labels, all_predictions)
+        print(f'Epoch: {epoch}, Precision: {precision}, Recall: {recall}, F1: {f1} , auc:{auc}')
         # print(f'Epoch {epoch+1}/{epochs}, Validation Loss: {val_loss / val_steps}')
         writer.add_scalar("Validation Loss", val_loss / val_steps, epoch)
         writer.add_scalar("Validation Precision", precision, epoch)
