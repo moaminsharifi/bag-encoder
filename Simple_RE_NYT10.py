@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore")
 import os
 import datetime
 import numpy as np
@@ -13,7 +15,7 @@ from torch.utils.data import DataLoader
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, BCELoss
 from data_loader_NYT import NYTDataset, train_dataset, test_dataset, val_dataset
 from Bin_classfier import MLPClassifier
-
+from config import hyperparams
 # Hyperparameters
 
 num_epochs = 1
@@ -39,7 +41,22 @@ df_data_loss = {"loss": [], "epoch": [], "step": []}
 metrics_df = pd.DataFrame(columns=['Epoch', 'Precision', 'Recall', 'F1', 'auc', 'Validation loss'])
 writer = SummaryWriter(log_dir)
 print(writer)
+def embed_with_bert(texts, tokenizer, model_bert, max_length, device , is_sentence = False):
+    result = []
+    max_word_per_text = hyperparams['max_word_per_sentence'] if is_sentence else 1
+    for text in texts:
+        inputs = tokenizer(text, return_tensors="pt", truncation=is_sentence, padding=True, max_length=max_length)
+        text_token_size = inputs['input_ids'].size()[-1] if is_sentence else 1
+        inputs = {name: tensor.to(device) for name, tensor in inputs.items()}  # Move tensors to device
+        bert_outputs = model_bert(**inputs, output_attentions=True)
 
+        fixed_size_mask = torch.zeros(
+            [max_length, 768]
+        )
+        fixed_size_mask[ :text_token_size, :] = bert_outputs.last_hidden_state[0, :text_token_size, :]
+        result.append(fixed_size_mask)
+
+    return torch.stack(result)
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertModel.from_pretrained('bert-base-uncased').to(device)
@@ -79,17 +96,7 @@ for epoch in range(num_epochs):
     for batch_sentences, batch_labels in tqdm(train_dataloader):
         step_count += 1
         batch_labels = (batch_labels).float().to(device)
-        batch_embeddings = []
-        for sentence in batch_sentences:
-            inputs = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True, max_length=max_length)
-            inputs = {name: tensor.to(device) for name, tensor in inputs.items()}  # Move tensors to dev
-            bert_outputs = bert_model(**inputs, output_attentions=True)
-            #sentence_embedding = bert_outputs.last_hidden_state[:, 0, :]
-            sentence_emiedding = torch.mean(bert_outputs.last_hidden_state, dim=1)
-            batch_embeddings.append (sentence_emiedding)
-        #batch_embeddings = [emb for emb in sentence_embedding]
-
-        batch_embeddings = torch.stack(batch_embeddings).to(device)
+        batch_embeddings = embed_with_bert(batch_sentences, tokenizer, bert_model, max_length, device , is_sentence = True).to(device)
         optimizer.zero_grad()
         # classifier_inputs = sentence_embedding.detach()
         classifier_outputs = classifier(batch_embeddings)
@@ -126,18 +133,8 @@ for epoch in range(num_epochs):
         step_count = 0
         for batch_sentences, batch_labels in tqdm(val_dataloader):
             batch_labels = (batch_labels).float().to(device)
-            batch_embeddings = []
-            for sentence in batch_sentences:
-                inputs = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True,
-                                   max_length=max_length)
-                inputs = {name: tensor.to(device) for name, tensor in inputs.items()}  # Move tensors to dev
-                bert_outputs = bert_model(**inputs, output_attentions=True)
-                sentence_embedding = bert_outputs.last_hidden_state[:, 0, :]
-                #sentence_embedding = torch.mean(bert_outputs.last_hidden_state, dim=1)
-                batch_embeddings.append(sentence_emiedding)
-              
-
-            batch_embeddings = torch.stack(batch_embeddings).to(device)
+            batch_embeddings = embed_with_bert(batch_sentences, tokenizer, bert_model, max_length, device,
+                                               is_sentence=True).to(device)
             # classifier_inputs = sentence_embedding.detach()
             classifier_outputs = classifier(batch_embeddings)
             classifier_outputs = classifier_outputs.view(-1)
