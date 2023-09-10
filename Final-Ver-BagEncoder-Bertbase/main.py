@@ -1,5 +1,6 @@
 import datetime
-
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import numpy as np
 import pandas as pd
 import torch
@@ -8,7 +9,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_sco
 from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import os
+
 
 #from Bag_Encoder_Dataloader_NYT10 import train_dataset, test_dataset
 from Bag_Encoder_Dataloader_GIDS import train_dataset, test_dataset
@@ -34,7 +35,7 @@ val_losses = []
 
 LABELS = np.array([0, 1]).astype(int)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
 
 training_date = datetime.datetime.now().strftime("%Y-%m-%d")
 t_dt = datetime.datetime.now().strftime("%Y%m%d-%H%M")
